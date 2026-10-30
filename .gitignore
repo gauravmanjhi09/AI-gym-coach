@@ -36,7 +36,7 @@ uv.lock
 *.sqlite3
 data.db
 
-ml_models/*.task
+# ml_models/*.task
 ml_models/*.tflite
 ml_models/*.pb
 
