@@ -71,7 +71,7 @@ def main():
 
             if not api_key and hasattr(st, "secrets") and "GROQ_API_KEY" in st.secrets:
                 api_key = st.secrets["GROQ_API_KEY"]
-            
+
             groq_client = Groq(api_key=api_key)
             llm_coach = LLMCoach(groq_client)
             tts = TextToSpeech()
@@ -117,7 +117,7 @@ def main():
                         exercise=plan_exercise,
                         metrics={}
                     )
-                    
+
                     if result:
                         st.session_state.audio_to_play, st.session_state.coach_feedback = result
 
@@ -156,7 +156,7 @@ def main():
             sets_completed = st.session_state.get("sets_completed")
             target_sets = st.session_state.get("target_sets")
 
-            
+
             st.subheader("Workout Progress")
 
             st.metric("Total Reps", f"{total_reps}")
@@ -229,27 +229,35 @@ def main():
         )
 
     else:
+        # Lower resolution + FPS so the (shared, weak) cloud CPU can keep up
         context = webrtc_streamer(
             key="exercise-analysis",
             mode=WebRtcMode.SENDRECV,
             video_processor_factory=VideoProcessorClass,
-            rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]},
-            media_stream_constraints={
-                "video": True,
-                "audio": False
+            rtc_configuration={
+                "iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]
             },
-            async_processing=True
+            media_stream_constraints={
+                "video": {
+                    "width": {"ideal": 640},
+                    "height": {"ideal": 480},
+                    "frameRate": {"ideal": 15, "max": 15},
+                },
+                "audio": False,
+            },
+            async_processing=True,
         )
 
         sync_metrics_update(context)
 
         if context.state.playing:
-            time.sleep(0.25)
+            # 1s instead of 0.25s: fewer full-script reruns on the cloud
+            time.sleep(1.0)
             st.rerun()
 
         inject_webrtc_styles()
 
-    
+
     st.divider()
     st.markdown("### 📊 Analytics")
 
@@ -263,7 +271,7 @@ def main():
         else:
             history_df = _to_dataframe_for_ui(history_rows)
 
-            
+
             summary = total_summary(history_rows)
             current_streak, longest_streak = calculate_streak(history_rows)
 
@@ -326,7 +334,7 @@ def main():
                             unsafe_allow_html=True,
                         )
 
-            
+
             with st.expander("View raw workout log"):
                 agg_df = history_df.groupby(["exercise_name", "date"]).agg(
                     Reps=("reps", "sum"), Sets=("sets", "sum"), Time=("time", "sum")
